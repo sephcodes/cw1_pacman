@@ -5,10 +5,6 @@ import numpy as np
 from sklearn.model_selection import GridSearchCV
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-# import torch
-# from torch import nn
-# from torch.utils.data import TensorDataset, DataLoader
-
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 
@@ -33,11 +29,9 @@ class SoftmaxGDClassifier(ClassifierMixin, BaseEstimator):
         # but added bias term like w0 and vectorized
         if x.ndim == 1:
             z = self.w_ @ x + self.b_
-            # z -= np.max(z)
             return np.exp(z) / np.sum(np.exp(z))
         else:
             z = x @ self.w_.T + self.b_
-            # z -= np.max(z, axis=1, keepdims=True)
             return np.exp(z) / np.sum(np.exp(z), axis=1, keepdims=True)
     
     def _predict_loss_grad(self, x, y):
@@ -89,105 +83,6 @@ class SoftmaxGDClassifier(ClassifierMixin, BaseEstimator):
     def predict(self, X):
         return np.argmax(self.predict_proba(X), axis=1)
     
-
-# ---------------------------------
-# Pytorch Neural Network Classifier
-# ---------------------------------
-# https://docs.pytorch.org/tutorials/beginner/basics/buildmodel_tutorial.html
-# https://docs.pytorch.org/tutorials/beginner/basics/optimization_tutorial.html
-# class NeuralNetwork(nn.Module):
-#     def __init__(self, input_dim, output_dim, hidden_dim):
-#         super().__init__()
-#         self.input_dim = input_dim
-#         self.output_dim = output_dim
-#         self.hidden_dim = hidden_dim
-#         self.linear_relu_stack = nn.Sequential(
-#             # Small NN model. Any bigger was massively overfitting
-#             # Will add dropout if still overfitting
-#             nn.Linear(self.input_dim, self.hidden_dim),
-#             nn.ReLU(),
-#             nn.Linear(self.hidden_dim, self.output_dim)
-#         )
-
-#     def forward(self, x):
-#         logits = self.linear_relu_stack(x)
-#         return logits
-
-# class NeuralNetworkClassifier(ClassifierMixin, BaseEstimator):
-#     def __init__(self):
-#         self.input_dim = 25
-#         self.output_dim = 4
-#         self.hidden_dim = 8
-#         self.learning_rate = 0.01
-#         self.batch_size = 10
-#         self.epochs = 100
-#         self.loss_fn = nn.CrossEntropyLoss()
-
-#         # # Model creation
-#         # self.model = NeuralNetwork(input_dim=self.input_dim, output_dim=self.output_dim, hidden_dim=self.hidden_dim)
-#         # # Optimizer
-#         # self.optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.learning_rate, weight_decay=0.01)
-    
-#     # https://docs.pytorch.org/tutorials/beginner/basics/optimization_tutorial.html#full-implementation
-#     def _train_loop(self, dataloader):
-#         self.model_.train()
-#         # Set the model to training mode - important for batch normalization and dropout layers
-#         # Unnecessary in this situation but added for best practices
-#         size = len(dataloader.dataset)
-#         for batch, (X, y) in enumerate(dataloader):
-#             # Compute prediction and loss
-#             pred = self.model_(X)
-#             loss = self.loss_fn(pred, y)
-
-#             # Backpropagation
-#             loss.backward()
-#             self.optimizer_.step()
-#             self.optimizer_.zero_grad()
-
-#             if batch == 0:
-#                 loss, current = loss.item(), batch * self.batch_size + len(X)
-#                 print(f"loss: {loss:>5f}")
-
-#         # Added train eval to monitor if train acc much higher than test acc (overfitting)
-#         # Evaluating the model with torch.no_grad() ensures that no gradients are computed during test mode
-#         # also serves to reduce unnecessary gradient computations and memory usage for tensors with requires_grad=True
-#         self.model_.eval()
-#         correct = 0
-#         with torch.no_grad():
-#             for X, y in dataloader:
-#                 pred = self.model_(X)
-#                 correct += (pred.argmax(1) == y).type(torch.float).sum().item()
-#         correct /= size
-#         print(f"Train Accuracy: {(100*correct):>0.1f}")
-    
-#     def fit(self, X, y):
-        
-#         # Moving Model creation to fit instead of __init__ because of sklearn ensemble
-#         self.model_ = NeuralNetwork(input_dim=self.input_dim, output_dim=self.output_dim, hidden_dim=self.hidden_dim)
-#         self.optimizer_ = torch.optim.AdamW(self.model_.parameters(), lr=self.learning_rate, weight_decay=0.01)
-
-#         X_tensor = torch.tensor(X, dtype=torch.float32)
-#         y_tensor = torch.tensor(y, dtype=torch.long)
-#         dataset = TensorDataset(X_tensor, y_tensor)
-#         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
-
-#         for epoch in range(self.epochs):
-#             print(f"Epoch {epoch+1}\n-------------------------------")
-#             self._train_loop(dataloader)
-
-#     def predict_proba(self, X):
-#         X_tensor = torch.tensor(X, dtype=torch.float32)
-#         if X_tensor.dim() == 1:
-#             X_tensor = X_tensor.unsqueeze(0)
-#         self.model_.eval()
-#         with torch.no_grad():
-#             pred_log = self.model_(X_tensor)
-#             pred_proba = torch.softmax(pred_log, dim=1)
-#         return pred_proba.numpy()
-    
-#     def predict(self, X):
-#         pred = self.predict_proba(X).argmax(1)
-#         return pred
 
 
 # ---------------------------------
@@ -246,6 +141,7 @@ class SupportVectorClassifier(ClassifierMixin, BaseEstimator):
     
     def predict(self, X):
         return self.model_.predict(X)
+
 
 
 class Classifier:

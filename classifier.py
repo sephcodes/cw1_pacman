@@ -10,6 +10,8 @@ from sklearn.svm import SVC
 
 from sklearn.ensemble import VotingClassifier
 
+from sklearn.calibration import CalibratedClassifierCV
+
 
 param_grid = {
     "learning_rate": [0.001, 0.005, 0.01],
@@ -107,6 +109,12 @@ class NeuralNetworkClassifier(ClassifierMixin, BaseEstimator):
             shuffle=True,
             verbose=True
         )
+        # neural net is dominating the ensemble predicted probabilities with overconfident predictions, so calibrating
+        # https://scikit-learn.org/stable/modules/calibration.html#probability-calibration
+        self.model_ = CalibratedClassifierCV(
+            self.model_,
+            cv=5
+        )
 
         self.model_.fit(X, y)
         # training accuracy
@@ -129,6 +137,11 @@ class SupportVectorClassifier(ClassifierMixin, BaseEstimator):
         
     def fit(self, X, y):
         self.model_ = SVC(gamma=self.gamma, probability=True)
+        # same calibration here
+        self.model_ = CalibratedClassifierCV(
+            self.model_,
+            cv=5
+        )
         self.model_.fit(X, y)
         # training accuracy
         y_pred = self.model_.predict(X)
@@ -156,12 +169,13 @@ class Classifier:
         self.gs = GridSearchCV(clf, param_grid, scoring="accuracy", cv=5, n_jobs=-1)
 
         self.nn = NeuralNetworkClassifier()
+
         self.svc = SupportVectorClassifier(gamma="auto")
         
         # https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.VotingClassifier.html
         self.eclf = VotingClassifier(
             estimators=[('lr', self.gs), ('nn', self.nn), ('svc', self.svc)], 
-            voting='soft' # switching to hard voting bc NN was dominating soft votes with overconfident probabilities
+            voting='soft'
         )
         self.eclf.fit(data, target)
         return self
@@ -171,9 +185,11 @@ class Classifier:
         if data.ndim == 1:
             data = data.reshape(1, -1)
         
+        print("INPUT: ", data)
+        
         # doing this to see the individual probabilities for each model
         results = []
-        ensemble_proba = self.eclf.predict_proba(data)
+        ensemble_proba = np.round(self.eclf.predict_proba(data), 3)
         ensemble_pred = self.eclf.predict(data)
         for i in range(len(data)):
             sample_info = {
@@ -184,7 +200,7 @@ class Classifier:
             for name, est in zip(self.eclf.named_estimators_.keys(), self.eclf.estimators_):
                 sample_info["individual_probas"][name] = np.round(est.predict_proba(
                     data[i].reshape(1, -1)
-                )[0], 2)
+                )[0], 3)
             results.append(sample_info)
         
         print(results)

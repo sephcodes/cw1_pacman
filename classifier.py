@@ -7,6 +7,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
+from sklearn.naive_bayes import BernoulliNB
 
 from sklearn.ensemble import VotingClassifier
 
@@ -15,16 +16,18 @@ from sklearn.calibration import CalibratedClassifierCV
 
 param_grid = {
     "learning_rate": [0.001, 0.005, 0.01],
-    "num_epochs": [10, 50, 100]
+    "num_epochs": [10, 50, 100],
+    "regularization": [0.001, 0.01, 0.1]
 }
 
 # -------------------------------------------------
 # Logistic Regression Softmax with Gradient Descent
 # -------------------------------------------------
 class SoftmaxGDClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, learning_rate=0.01, num_epochs=100):
-        self.learning_rate = learning_rate
-        self.num_epochs = num_epochs
+    def __init__(self, learning_rate=0.01, num_epochs=100, regularization=0.01):
+        self.learning_rate = 0.01
+        self.num_epochs = 100
+        self.regularization = regularization
 
     def _softmax(self, x):
         # softmax from https://en.wikipedia.org/wiki/Multinomial_logistic_regression and 8.3.7 Murphy book
@@ -73,6 +76,7 @@ class SoftmaxGDClassifier(ClassifierMixin, BaseEstimator):
                 grad_b_sum += grad_b
 
             # batch gradient descent
+            grad_w_sum += self.regularization * self.w_ # adding regularization term to the gradient sum
             self.w_ -= self.learning_rate * grad_w_sum / N
             self.b_ -= self.learning_rate * grad_b_sum / N
 
@@ -130,6 +134,9 @@ class NeuralNetworkClassifier(ClassifierMixin, BaseEstimator):
         return self.model_.predict(X)
     
 
+# -------------------------
+# Support Vector Classifier
+# -------------------------
 # https://sklearn.org/stable/modules/generated/sklearn.svm.SVC.html
 class SupportVectorClassifier(ClassifierMixin, BaseEstimator):
     def __init__(self, gamma):
@@ -142,6 +149,33 @@ class SupportVectorClassifier(ClassifierMixin, BaseEstimator):
             self.model_,
             cv=5
         )
+        self.model_.fit(X, y)
+        # training accuracy
+        y_pred = self.model_.predict(X)
+        train_acc = np.mean(np.array(y_pred) == y)
+        print(f"Train Accuracy: {100 * train_acc}%")
+        return self
+    
+    def predict_proba(self, X):
+        return self.model_.predict_proba(X)
+    
+    def predict(self, X):
+        return self.model_.predict(X)
+    
+
+# --------------------------------
+# Bernoulli Naive Bayes Classifier
+# --------------------------------
+# https://scikit-learn.org/stable/modules/generated/sklearn.naive_bayes.BernoulliNB.html#sklearn.naive_bayes.BernoulliNB
+# Like MultinomialNB, this classifier is suitable for discrete data. The difference is that while MultinomialNB works with occurrence counts, 
+# BernoulliNB is designed for binary/boolean features.
+# FAQ said NB is considered a simple model but based on above, it seems suitable for this
+class BernoulliNBClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self):
+        pass
+
+    def fit(self, X, y):
+        self.model_ = BernoulliNB()
         self.model_.fit(X, y)
         # training accuracy
         y_pred = self.model_.predict(X)
@@ -171,10 +205,12 @@ class Classifier:
         self.nn = NeuralNetworkClassifier()
 
         self.svc = SupportVectorClassifier(gamma="auto")
+
+        self.nb = BernoulliNBClassifier()
         
         # https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.VotingClassifier.html
         self.eclf = VotingClassifier(
-            estimators=[('lr', self.gs), ('nn', self.nn), ('svc', self.svc)], 
+            estimators=[('lr', self.gs), ('nn', self.nn), ('svc', self.svc), ('nb', self.nb)], 
             voting='soft'
         )
         self.eclf.fit(data, target)

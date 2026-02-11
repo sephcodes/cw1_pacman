@@ -31,7 +31,7 @@ class SoftmaxGDClassifier(ClassifierMixin, BaseEstimator):
 
     def _softmax(self, x):
         # softmax from https://en.wikipedia.org/wiki/Multinomial_logistic_regression and 8.3.7 Murphy book
-        # but added bias term like w0 and vectorized
+        # but added bias term and vectorized
         if x.ndim == 1:
             z = self.w_ @ x + self.b_
             return np.exp(z) / np.sum(np.exp(z))
@@ -139,7 +139,7 @@ class NeuralNetworkClassifier(ClassifierMixin, BaseEstimator):
 # -------------------------
 # https://sklearn.org/stable/modules/generated/sklearn.svm.SVC.html
 class SupportVectorClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, gamma):
+    def __init__(self, gamma="auto"):
         self.gamma = gamma
         
     def fit(self, X, y):
@@ -167,9 +167,9 @@ class SupportVectorClassifier(ClassifierMixin, BaseEstimator):
 # Bernoulli Naive Bayes Classifier
 # --------------------------------
 # https://scikit-learn.org/stable/modules/generated/sklearn.naive_bayes.BernoulliNB.html#sklearn.naive_bayes.BernoulliNB
-# Like MultinomialNB, this classifier is suitable for discrete data. The difference is that while MultinomialNB works with occurrence counts, 
-# BernoulliNB is designed for binary/boolean features.
-# FAQ said NB is considered a simple model but based on above, it seems suitable for this
+# "Like MultinomialNB, this classifier is suitable for discrete data. 
+# The difference is that while MultinomialNB works with occurrence counts, BernoulliNB is designed for binary/boolean features."
+# CW FAQ said NB is considered a simple model but based on above quote, it seems suitable for this experiment
 class BernoulliNBClassifier(ClassifierMixin, BaseEstimator):
     def __init__(self):
         pass
@@ -204,7 +204,7 @@ class Classifier:
 
         self.nn = NeuralNetworkClassifier()
 
-        self.svc = SupportVectorClassifier(gamma="auto")
+        self.svc = SupportVectorClassifier()
 
         self.nb = BernoulliNBClassifier()
         
@@ -240,5 +240,4 @@ class Classifier:
             results.append(sample_info)
         
         print(results)
-        preds = self.eclf.predict(data)
-        return preds
+        return ensemble_pred

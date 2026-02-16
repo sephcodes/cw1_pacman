@@ -25,8 +25,8 @@ param_grid = {
 # -------------------------------------------------
 class SoftmaxGDClassifier(ClassifierMixin, BaseEstimator):
     def __init__(self, learning_rate=0.01, num_epochs=100, regularization=0.01):
-        self.learning_rate = 0.01
-        self.num_epochs = 100
+        self.learning_rate = learning_rate
+        self.num_epochs = num_epochs
         self.regularization = regularization
 
     def _softmax(self, x):

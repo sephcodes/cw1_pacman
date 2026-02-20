@@ -124,7 +124,7 @@ class NeuralNetworkClassifier(ClassifierMixin, BaseEstimator):
         # training accuracy
         y_pred = self.model_.predict(X)
         train_acc = np.mean(np.array(y_pred) == y)
-        print(f"Train Accuracy: {100 * train_acc}%")
+        print(f"NN Train Accuracy: {100 * train_acc}%")
         return self
 
     def predict_proba(self, X):
@@ -135,15 +135,29 @@ class NeuralNetworkClassifier(ClassifierMixin, BaseEstimator):
     
 
 # -------------------------
-# Support Vector Classifier
+# SVC with Gaussian kernel
 # -------------------------
 # https://sklearn.org/stable/modules/generated/sklearn.svm.SVC.html
-class SupportVectorClassifier(ClassifierMixin, BaseEstimator):
-    def __init__(self, gamma="auto"):
+# https://scikit-learn.org/stable/auto_examples/svm/plot_custom_kernel.html#sphx-glr-auto-examples-svm-plot-custom-kernel-py
+# https://scikit-learn.org/stable/modules/svm.html#using-python-functions-as-kernels
+class KernelClassifier(ClassifierMixin, BaseEstimator):
+    def __init__(self, gamma=1/25):
+        # gamma=1/n_features like SVC gamma="auto"
         self.gamma = gamma
-        
+
+    def _kernel(self, X1, X2):
+        # https://en.wikipedia.org/wiki/Radial_basis_function_kernel
+        # exp(-gamma * ||X1 - X2||**2)
+        # ||X1 - X2||**2 == X1^2 + X2^2 - 2X1X2
+        X1 = np.asarray(X1)
+        X2 = np.asarray(X2)
+        X1_norm = np.sum(X1**2, axis=1).reshape(-1, 1)
+        X2_norm = np.sum(X2**2, axis=1).reshape(1, -1)
+        sq_dist = X1_norm + X2_norm - 2 * (X1 @ X2.T)
+        return np.exp(-self.gamma * sq_dist)
+    
     def fit(self, X, y):
-        self.model_ = SVC(gamma=self.gamma, probability=True)
+        self.model_ = SVC(kernel=self._kernel)
         # same calibration here
         self.model_ = CalibratedClassifierCV(
             self.model_,
@@ -153,7 +167,7 @@ class SupportVectorClassifier(ClassifierMixin, BaseEstimator):
         # training accuracy
         y_pred = self.model_.predict(X)
         train_acc = np.mean(np.array(y_pred) == y)
-        print(f"Train Accuracy: {100 * train_acc}%")
+        print(f"Kernel Train Accuracy: {100 * train_acc}%")
         return self
     
     def predict_proba(self, X):
@@ -180,7 +194,7 @@ class BernoulliNBClassifier(ClassifierMixin, BaseEstimator):
         # training accuracy
         y_pred = self.model_.predict(X)
         train_acc = np.mean(np.array(y_pred) == y)
-        print(f"Train Accuracy: {100 * train_acc}%")
+        print(f"NB Train Accuracy: {100 * train_acc}%")
         return self
     
     def predict_proba(self, X):
@@ -204,13 +218,13 @@ class Classifier:
 
         self.nn = NeuralNetworkClassifier()
 
-        self.svc = SupportVectorClassifier()
+        self.kernel = KernelClassifier()
 
         self.nb = BernoulliNBClassifier()
         
         # https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.VotingClassifier.html
         self.eclf = VotingClassifier(
-            estimators=[('lr', self.gs), ('nn', self.nn), ('svc', self.svc), ('nb', self.nb)], 
+            estimators=[('lr', self.gs), ('nn', self.nn), ('kernel', self.kernel), ('nb', self.nb)], 
             voting='soft'
         )
         self.eclf.fit(data, target)

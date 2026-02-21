@@ -45,7 +45,7 @@ class SoftmaxGDClassifier(ClassifierMixin, BaseEstimator):
         # https://en.wikipedia.org/wiki/Multinomial_logistic_regression#Likelihood_function
         loss = -np.log(probs[y])
 
-        # (4.109) PRML book (https://www.microsoft.com/en-us/research/wp-content/uploads/2006/01/Bishop-Pattern-Recognition-and-Machine-Learning-2006.pdf)
+        # (4.109) PRML book we used in my stats class (https://www.microsoft.com/en-us/research/wp-content/uploads/2006/01/Bishop-Pattern-Recognition-and-Machine-Learning-2006.pdf)
         t = np.zeros_like(probs)
         t[y] = 1
         grad_w = np.outer(probs - t, x)
